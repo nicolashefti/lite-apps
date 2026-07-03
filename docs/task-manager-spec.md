@@ -1,6 +1,6 @@
 # Personal Task Manager — Data & File Sync Specification
 
-**Version:** 1.0
+**Version:** 1.1 (schema v2: projects — see §2.6)
 **Scope:** JSON data format + File System Access API persistence layer for a fully client-side, single-user task manager. The data file lives in a cloud-synced folder (e.g. iCloud Drive); the app itself never talks to any network service.
 
 ---
@@ -23,7 +23,7 @@ Target browsers: Chromium-based (Chrome, Edge, Arc, Brave). Provide a degraded i
 ```json
 {
   "format": "personal-task-manager",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "meta": {
     "createdAt": "2026-07-03T10:00:00.000Z",
     "updatedAt": "2026-07-03T14:23:11.412Z",
@@ -35,6 +35,7 @@ Target browsers: Chromium-based (Chrome, Edge, Arc, Brave). Provide a degraded i
     "defaultListId": "inbox"
   },
   "lists": [],
+  "projects": [],
   "tasks": []
 }
 ```
@@ -69,6 +70,7 @@ Target browsers: Chromium-based (Chrome, Edge, Arc, Brave). Provide a degraded i
 {
   "id": "9b2e6c1a-4f3d-4b7e-a1c2-8d9e0f1a2b3c",
   "listId": "inbox",
+  "projectId": null,
   "title": "Renew passport",
   "notes": "Bring two photos.\nOffice closes at 16:00.",
   "status": "open",
@@ -91,6 +93,7 @@ Field rules:
 |---|---|---|
 | `id` | UUID string | `crypto.randomUUID()`. Never reused. |
 | `listId` | string | Must reference an existing list; orphans are moved to `"inbox"` on load. |
+| `projectId` | string \| null | Schema v2 (§2.6). Must reference an existing project or be `null`; unknown references are set to `null` on load and surfaced under the virtual "Orphans" project. |
 | `title` | string | Required, non-empty after trim, max 500 chars. |
 | `notes` | string | Optional, plain text (newlines allowed), default `""`. |
 | `status` | enum | `"open"` \| `"done"` \| `"cancelled"`. |
@@ -113,6 +116,7 @@ On file open, validate before accepting:
 3. JSON parses and top-level keys exist; unknown extra keys are **preserved** (read → keep → write back untouched) to stay forward-compatible.
 4. Repair pass (non-destructive fixes, logged to console):
    - Tasks with unknown `listId` → reassign to `"inbox"`.
+   - Tasks with unknown `projectId` → set to `null` (virtual "Orphans" project, §2.6).
    - Missing optional fields → fill defaults.
    - Duplicate task IDs → keep first, regenerate ID of subsequent duplicates.
 
@@ -120,6 +124,31 @@ On file open, validate before accepting:
 
 - Keep a `migrations` map: `{ 1: (data) => data2, ... }` applied sequentially from file's `schemaVersion` up to current.
 - After successful migration, write a one-time backup of the pre-migration file (§7) before saving in the new format.
+- Existing migrations: **1 → 2** adds the `projects` array and gives every task a `projectId` of `null` (orphan).
+
+### 2.6 Projects (added in schema v2)
+
+Every task belongs to exactly one project via `projectId`, or to the virtual **"Orphans"** project when `projectId` is `null`. Orphans is a UI concept only — it is never stored in the file.
+
+```json
+{
+  "id": "d4c3b2a1-0f9e-4d8c-b7a6-5e4f3d2c1b0a",
+  "name": "Home renovation",
+  "status": "mvp",
+  "archived": false,
+  "order": 0
+}
+```
+
+| Field | Type | Rules |
+|---|---|---|
+| `id` | UUID string | `crypto.randomUUID()`. |
+| `name` | string | Required, non-empty after trim. |
+| `status` | enum | `"poc"` \| `"mvp"` \| `"run"`. Default `"poc"`; invalid values repaired to `"poc"` on load. |
+| `archived` | boolean | Archived projects are hidden from active views and task assignment. Default `false`. |
+| `order` | integer | Manual sort position in the project view. |
+
+Completion is **derived, never stored**: `done / total` over the project's tasks, excluding `cancelled` ones. Tasks created from the project view land in the lowest-`order` non-archived list.
 
 ---
 

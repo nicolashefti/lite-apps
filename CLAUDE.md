@@ -30,6 +30,7 @@ Open http://localhost:8000 in a Chromium browser (Chrome, Edge, Arc, Brave). Saf
 - Unknown JSON keys must round-trip untouched (forward compatibility): mutate the loaded object in place; never rebuild the data object from scratch.
 - All state changes go through `store.mutate()`; UI code never assigns to `store.data` directly.
 - The `"inbox"` list always exists and cannot be deleted.
+- A task belongs to exactly one project via `projectId`, or `null` = the virtual "Orphans" project. Orphans is UI-only, never stored in the file; unknown project ids are nulled by the repair pass. Project completion is derived from tasks, never stored.
 - Saves are queued, never concurrent; in-flight saves coalesce trailing requests.
 - `localStorage` holds only the device ID, backup date and UI prefs — never task data. File handles live in IndexedDB.
 - Tasks are hard-deleted. No tombstones in the file; undo (if ever added) is in-memory only.

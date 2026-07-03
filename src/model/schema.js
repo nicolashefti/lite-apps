@@ -2,11 +2,14 @@
 // Source of truth for the file format: docs/task-manager-spec.md §2.
 
 export const FORMAT = "personal-task-manager";
-export const SCHEMA_VERSION = 1;
-export const APP_VERSION = "1.0.0";
+export const SCHEMA_VERSION = 2;
+export const APP_VERSION = "1.1.0";
 export const INBOX_ID = "inbox";
 
 export const PRIORITY_LABELS = { 0: "", 1: "Low", 2: "Med", 3: "High" };
+
+export const PROJECT_STATUSES = ["poc", "mvp", "run"];
+export const PROJECT_STATUS_LABELS = { poc: "POC", mvp: "MVP", run: "Run" };
 
 const LIST_COLORS = ["#5B8DEF", "#E8927C", "#7CC47F", "#C58AF9", "#F2C14E", "#6BC5D2"];
 
@@ -28,6 +31,7 @@ export function createEmptyData(deviceId) {
     },
     settings: { defaultListId: INBOX_ID },
     lists: [inboxList()],
+    projects: [],
     tasks: [],
   };
 }
@@ -46,11 +50,22 @@ export function createList(name, order) {
   };
 }
 
-export function createTask(listId, title, order) {
+export function createProject(name, order) {
+  return {
+    id: crypto.randomUUID(),
+    name,
+    status: "poc",
+    archived: false,
+    order,
+  };
+}
+
+export function createTask(listId, title, order, projectId = null) {
   const ts = nowIso();
   return {
     id: crypto.randomUUID(),
     listId,
+    projectId,
     title,
     notes: "",
     status: "open",
@@ -71,7 +86,15 @@ export function shortId() {
 
 // Migrations map: { fromVersion: (data) => data }, applied sequentially
 // from the file's schemaVersion up to SCHEMA_VERSION (spec §2.5).
-export const migrations = {};
+export const migrations = {
+  // v1 → v2: introduce projects. Existing tasks become orphans (projectId
+  // null), surfaced in the UI under the virtual "Orphans" project.
+  1: (data) => {
+    if (!Array.isArray(data.projects)) data.projects = [];
+    for (const t of data.tasks ?? []) t.projectId ??= null;
+    return data;
+  },
+};
 
 export function needsMigration(data) {
   return data.schemaVersion < SCHEMA_VERSION;
@@ -131,12 +154,28 @@ export function repair(data) {
     l.archived ??= false;
   }
 
+  if (!Array.isArray(data.projects)) data.projects = [];
+  for (const p of data.projects) {
+    p.name ??= "Untitled";
+    if (!PROJECT_STATUSES.includes(p.status)) {
+      log(`project ${p.id} had invalid status "${p.status}" → "poc"`);
+      p.status = "poc";
+    }
+    p.archived ??= false;
+    p.order ??= 0;
+  }
+
   const listIds = new Set(data.lists.map((l) => l.id));
+  const projectIds = new Set(data.projects.map((p) => p.id));
   const seenTaskIds = new Set();
   for (const t of data.tasks) {
     if (!listIds.has(t.listId)) {
       log(`task ${t.id} referenced unknown list "${t.listId}" → moved to inbox`);
       t.listId = INBOX_ID;
+    }
+    if (t.projectId != null && !projectIds.has(t.projectId)) {
+      log(`task ${t.id} referenced unknown project "${t.projectId}" → orphaned`);
+      t.projectId = null;
     }
     if (seenTaskIds.has(t.id)) {
       const old = t.id;
@@ -151,6 +190,7 @@ export function repair(data) {
 
 function fillTaskDefaults(t) {
   t.title ??= "(untitled)";
+  t.projectId ??= null;
   t.notes ??= "";
   t.status ??= "open";
   t.priority ??= 0;

@@ -2,7 +2,7 @@
 // it applies the change, stamps meta.updatedAt, notifies the UI and
 // triggers the save hook (wired to the debounced save in main.js).
 
-import { nowIso, createTask, createList, INBOX_ID } from "./schema.js";
+import { nowIso, createTask, createList, createProject, INBOX_ID } from "./schema.js";
 
 export const store = { data: null };
 
@@ -52,16 +52,53 @@ export function visibleLists() {
     .sort((a, b) => a.order - b.order);
 }
 
+export function getProject(id) {
+  return store.data.projects.find((p) => p.id === id);
+}
+
+export function visibleProjects() {
+  return store.data.projects
+    .filter((p) => !p.archived)
+    .sort((a, b) => a.order - b.order);
+}
+
+export function archivedProjects() {
+  return store.data.projects
+    .filter((p) => p.archived)
+    .sort((a, b) => a.order - b.order);
+}
+
+// projectId null selects orphan tasks (the virtual "Orphans" project).
+export function tasksInProject(projectId) {
+  return store.data.tasks.filter((t) => (t.projectId ?? null) === projectId);
+}
+
+// Completion excludes cancelled tasks — they are neither done nor pending.
+export function projectStats(projectId) {
+  const tasks = tasksInProject(projectId).filter((t) => t.status !== "cancelled");
+  const done = tasks.filter((t) => t.status === "done").length;
+  const total = tasks.length;
+  return { done, total, pct: total ? Math.round((done / total) * 100) : 0 };
+}
+
 // ---- task operations -------------------------------------------------------
 
-export function addTask(listId, title) {
+export function addTask(listId, title, projectId = null) {
   const clean = title.trim().slice(0, 500);
   if (!clean) return;
   mutate((d) => {
     const order =
       Math.max(-1, ...d.tasks.filter((t) => t.listId === listId).map((t) => t.order)) + 1;
-    d.tasks.push(createTask(listId, clean, order));
+    d.tasks.push(createTask(listId, clean, order, projectId));
   });
+}
+
+// Quick capture from the project view: new tasks land in the lowest-order
+// (leftmost) non-archived list.
+export function addTaskToProject(projectId, title) {
+  const list = visibleLists()[0];
+  if (!list) return;
+  addTask(list.id, title, projectId);
 }
 
 export function updateTask(id, patch) {
@@ -104,6 +141,26 @@ export function moveTask(id, listId, index = Infinity) {
     siblings.splice(i, 0, t);
     siblings.forEach((x, n) => (x.order = n));
     t.updatedAt = nowIso();
+  });
+}
+
+// ---- project operations ----------------------------------------------------
+
+export function addProject(name) {
+  const clean = name.trim();
+  if (!clean) return;
+  mutate((d) => {
+    const order = Math.max(-1, ...d.projects.map((p) => p.order)) + 1;
+    d.projects.push(createProject(clean, order));
+  });
+}
+
+export function updateProject(id, patch) {
+  mutate((d) => {
+    const p = d.projects.find((x) => x.id === id);
+    if (!p) return;
+    Object.assign(p, patch);
+    if ("name" in patch) p.name = String(patch.name).trim() || "Untitled";
   });
 }
 

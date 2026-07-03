@@ -9,6 +9,7 @@ import {
   moveTask,
   renameList,
   deleteList,
+  getProject,
 } from "../model/store.js";
 import { INBOX_ID, PRIORITY_LABELS } from "../model/schema.js";
 import { openTaskEditor } from "./taskModal.js";
@@ -125,6 +126,13 @@ function cardEl(task) {
 
   const meta = document.createElement("div");
   meta.className = "card-meta";
+  const project = task.projectId ? getProject(task.projectId) : null;
+  if (project) {
+    const chip = document.createElement("span");
+    chip.className = "project-chip";
+    chip.textContent = project.name;
+    meta.appendChild(chip);
+  }
   if (task.priority > 0) {
     const p = document.createElement("span");
     p.className = `prio prio-${task.priority}`;

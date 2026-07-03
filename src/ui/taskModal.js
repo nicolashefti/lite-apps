@@ -1,7 +1,13 @@
 // Task editor dialog. Edits are collected locally and applied in a single
 // updateTask() on save, so the store mutates (and autosaves) once.
 
-import { getTask, updateTask, deleteTask } from "../model/store.js";
+import {
+  getTask,
+  updateTask,
+  deleteTask,
+  visibleProjects,
+  getProject,
+} from "../model/store.js";
 import { shortId } from "../model/schema.js";
 import { showModal, escapeHtml } from "./modal.js";
 
@@ -36,6 +42,7 @@ export function openTaskEditor(taskId) {
           <input type="date" name="dueDate" value="${task.dueDate ?? ""}">
         </label>
       </div>
+      <label>Project <select name="projectId"></select></label>
       <label>Tags <input name="tags" placeholder="comma, separated"
         value="${escapeHtml(task.tags.join(", "))}"></label>
       <div class="subtasks">
@@ -53,6 +60,14 @@ export function openTaskEditor(taskId) {
 
   box.querySelector('[name="status"]').value = task.status;
   box.querySelector('[name="priority"]').value = String(task.priority);
+
+  const projectSelect = box.querySelector('[name="projectId"]');
+  projectSelect.append(new Option("Orphans (no project)", ""));
+  const options = visibleProjects();
+  const current = task.projectId ? getProject(task.projectId) : null;
+  if (current?.archived) options.push(current); // keep an archived assignment selectable
+  for (const p of options) projectSelect.append(new Option(p.name, p.id));
+  projectSelect.value = task.projectId ?? "";
 
   const listEl = box.querySelector(".subtask-list");
   const renderSubtasks = () => {
@@ -108,6 +123,7 @@ export function openTaskEditor(taskId) {
       priority: Number(f.get("priority")),
       dueDate: f.get("dueDate") || null,
       tags: f.get("tags").split(","),
+      projectId: f.get("projectId") || null,
       subtasks,
     });
     close();
