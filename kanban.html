@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kanban Lite</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header id="topbar" class="topbar hidden">
+    <h1>Kanban Lite</h1>
+    <nav class="view-switch">
+      <button id="view-board-btn" class="active">Board</button>
+      <button id="view-projects-btn">Projects</button>
+    </nav>
+    <span id="save-status" class="save-status"></span>
+    <span class="spacer"></span>
+    <button id="new-list-btn">+ New list</button>
+    <button id="new-project-btn" class="hidden">+ New project</button>
+    <button id="backup-btn" title="Choose backup folder">Backups</button>
+    <button id="download-btn" class="hidden">Download</button>
+  </header>
+
+  <main>
+    <section id="welcome" class="screen">
+      <div class="welcome-card">
+        <h1>Kanban Lite</h1>
+        <p>A personal task board that lives in a single JSON file — put it in
+           iCloud Drive or Dropbox and it follows you across machines.
+           No account, no server.</p>
+        <p id="welcome-msg" class="welcome-msg"></p>
+        <div class="welcome-actions">
+          <button id="reconnect-btn" class="primary hidden">Reconnect to your file</button>
+          <button id="create-file-btn" class="primary">Create new file</button>
+          <button id="open-file-btn">Open existing file</button>
+        </div>
+        <input type="file" id="file-input" accept="application/json,.json" hidden>
+      </div>
+    </section>
+
+    <section id="board" class="board hidden"></section>
+    <section id="projects" class="projects hidden"></section>
+  </main>
+
+  <div id="modal-root"></div>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

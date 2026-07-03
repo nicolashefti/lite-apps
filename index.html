@@ -3,46 +3,80 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kanban Lite</title>
+  <title>Apps</title>
   <link rel="stylesheet" href="styles.css">
+  <style>
+    .launcher {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .launcher-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      width: 100%;
+      max-width: 520px;
+    }
+
+    .app-card {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 28px 24px 24px;
+      text-decoration: none;
+      color: var(--text);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .app-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 4px 12px rgba(91, 141, 239, 0.15);
+    }
+
+    .app-icon {
+      font-size: 32px;
+      line-height: 1;
+    }
+
+    .app-card h2 {
+      margin: 8px 0 0;
+      font-size: 16px;
+    }
+
+    .app-card p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+  </style>
 </head>
 <body>
-  <header id="topbar" class="topbar hidden">
-    <h1>Kanban Lite</h1>
-    <nav class="view-switch">
-      <button id="view-board-btn" class="active">Board</button>
-      <button id="view-projects-btn">Projects</button>
-    </nav>
-    <span id="save-status" class="save-status"></span>
-    <span class="spacer"></span>
-    <button id="new-list-btn">+ New list</button>
-    <button id="new-project-btn" class="hidden">+ New project</button>
-    <button id="backup-btn" title="Choose backup folder">Backups</button>
-    <button id="download-btn" class="hidden">Download</button>
+  <header class="topbar">
+    <h1>My Apps</h1>
   </header>
 
-  <main>
-    <section id="welcome" class="screen">
-      <div class="welcome-card">
-        <h1>Kanban Lite</h1>
-        <p>A personal task board that lives in a single JSON file — put it in
-           iCloud Drive or Dropbox and it follows you across machines.
-           No account, no server.</p>
-        <p id="welcome-msg" class="welcome-msg"></p>
-        <div class="welcome-actions">
-          <button id="reconnect-btn" class="primary hidden">Reconnect to your file</button>
-          <button id="create-file-btn" class="primary">Create new file</button>
-          <button id="open-file-btn">Open existing file</button>
-        </div>
-        <input type="file" id="file-input" accept="application/json,.json" hidden>
-      </div>
-    </section>
-
-    <section id="board" class="board hidden"></section>
-    <section id="projects" class="projects hidden"></section>
-  </main>
-
-  <div id="modal-root"></div>
-  <script type="module" src="src/main.js"></script>
+  <div class="launcher">
+    <div class="launcher-grid">
+      <a href="kanban.html" class="app-card">
+        <div class="app-icon">📋</div>
+        <h2>Kanban Lite</h2>
+        <p>Personal task board in a single JSON file. Works with iCloud &amp; Dropbox.</p>
+      </a>
+      <a href="flashcards.html" class="app-card">
+        <div class="app-icon">🗂️</div>
+        <h2>Flashcards</h2>
+        <p>Study any CSV deck. Create cards in a spreadsheet app and load them here.</p>
+      </a>
+    </div>
+  </div>
 </body>
 </html>
