@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Flashcards</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* ---- flashcard study screen ---- */
+
+    .fc-study {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      padding: 24px;
+    }
+
+    /* 3-D flip container */
+    .fc-card-wrapper {
+      perspective: 1000px;
+      width: min(520px, 100%);
+    }
+
+    .fc-card {
+      width: 100%;
+      height: 260px;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.38s ease;
+      cursor: pointer;
+    }
+
+    .fc-card.flipped { transform: rotateY(180deg); }
+
+    .fc-face {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 28px 24px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      background: var(--surface);
+      font-size: 1.25rem;
+      line-height: 1.5;
+      text-align: center;
+      white-space: pre-wrap;
+    }
+
+    .fc-face-back {
+      transform: rotateY(180deg);
+      background: #eef2ff;  /* subtle tint so back is visually distinct */
+    }
+
+    .fc-face-label {
+      position: absolute;
+      top: 10px;
+      left: 14px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+    }
+
+    .fc-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .fc-hint {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* "Shuffle" button shows active state when on */
+    #fc-shuffle-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <header id="fc-topbar" class="topbar hidden">
+    <h1 id="fc-title">Flashcards</h1>
+    <span id="fc-progress" style="font-size:13px;color:var(--muted)"></span>
+    <span class="spacer"></span>
+    <button id="fc-shuffle-btn" title="Shuffle cards and restart">Shuffle</button>
+    <button id="fc-restart-btn" title="Restart from card 1">Restart</button>
+    <button id="fc-load-btn">Load deck</button>
+  </header>
+
+  <!-- single shared file input, triggered programmatically from any button -->
+  <input type="file" id="fc-file-input" accept=".csv,text/csv" hidden>
+
+  <main>
+    <section id="fc-welcome" class="screen">
+      <div class="welcome-card">
+        <h1>Flashcards</h1>
+        <p>Make a deck in any spreadsheet app:<br>
+           column A = front &nbsp;·&nbsp; column B = back.<br>
+           Export as CSV and load it here.</p>
+        <div class="welcome-actions">
+          <button id="fc-open-btn" class="primary">Load CSV deck</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="fc-study" class="fc-study hidden">
+      <div class="fc-card-wrapper">
+        <div id="fc-card" class="fc-card"
+             role="button" tabindex="0"
+             aria-pressed="false"
+             title="Click or press Space to flip">
+          <div class="fc-face fc-face-front">
+            <span class="fc-face-label">Front</span>
+            <span id="fc-front-text"></span>
+          </div>
+          <div class="fc-face fc-face-back">
+            <span class="fc-face-label">Back</span>
+            <span id="fc-back-text"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="fc-controls">
+        <button id="fc-prev-btn">← Prev</button>
+        <button id="fc-flip-btn" class="primary">Flip</button>
+        <button id="fc-next-btn">Next →</button>
+      </div>
+
+      <span class="fc-hint">Space to flip &nbsp;·&nbsp; ← → to navigate</span>
+    </section>
+  </main>
+
+  <script type="module" src="src/flashcards/main.js"></script>
+</body>
+</html>
