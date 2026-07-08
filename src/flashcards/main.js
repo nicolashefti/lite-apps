@@ -99,6 +99,21 @@ els.card.addEventListener('keydown', e => {
   if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); }
 });
 
+let touchStartX = 0;
+let touchStartY = 0;
+els.card.addEventListener('touchstart', e => {
+  touchStartX = e.changedTouches[0].clientX;
+  touchStartY = e.changedTouches[0].clientY;
+}, { passive: true });
+els.card.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  // Ignore taps and vertical scrolls; only handle clear horizontal swipes
+  if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+  e.preventDefault(); // suppress the subsequent click (would flip)
+  go(dx < 0 ? 1 : -1);
+});
+
 els.flipBtn.addEventListener('click', flip);
 els.prevBtn.addEventListener('click', () => go(-1));
 els.nextBtn.addEventListener('click', () => go(1));
