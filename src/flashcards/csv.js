@@ -1,9 +1,13 @@
 // RFC 4180 CSV parser. Returns [{front, back}] pairs.
 // Skips header row if first row looks like column labels.
 // Ignores columns beyond the first two.
+// Delimiter auto-detected from the first line: whichever of ',' or ';' appears more wins.
 
 export function parseCSV(text) {
-  const rows = tokenise(text.trimEnd());
+  const nl = text.search(/[\r\n]/);
+  const firstLine = nl === -1 ? text : text.slice(0, nl);
+  const delim = (firstLine.split(';').length > firstLine.split(',').length) ? ';' : ',';
+  const rows = tokenise(text.trimEnd(), delim);
   if (rows.length === 0) return [];
 
   // Detect optional header row by checking first cell content
@@ -20,7 +24,7 @@ export function parseCSV(text) {
 }
 
 // Splits text into rows of fields, handling quoted fields and "" escaping.
-function tokenise(text) {
+function tokenise(text, delim = ',') {
   const rows = [];
   let row = [];
   let field = '';
@@ -40,7 +44,7 @@ function tokenise(text) {
     } else {
       if (ch === '"') {
         inQuote = true;
-      } else if (ch === ',') {
+      } else if (ch === delim) {
         row.push(field); field = '';
       } else if (ch === '\r' && text[i + 1] === '\n') {
         row.push(field); rows.push(row); row = []; field = ''; i += 2; continue;
