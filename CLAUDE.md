@@ -14,15 +14,30 @@ Open http://localhost:8000 in a Chromium browser (Chrome, Edge, Arc, Brave). Saf
 
 ## Architecture
 
+One folder per app under `src/`; shared utilities live in `src/shared/`.
+
+### Kanban (`src/kanban/`)
+
 | Path | Role |
 |---|---|
-| `src/model/schema.js` | Format constants, defaults, validation, repair pass, migrations map |
-| `src/model/store.js` | In-memory store; **all** mutations go through `mutate()` |
-| `src/storage/fileHandle.js` | Pickers, permissions, IndexedDB handle persistence |
-| `src/storage/persistence.js` | Load pipeline, 750 ms debounced save queue, pre-write conflict gate |
-| `src/storage/backups.js` | Daily rolling backups (keep 14), pre-migration backups |
-| `src/ui/` | Vanilla DOM; full board re-render on every store change |
-| `src/main.js` | Boot, screen switching, event wiring, fallback mode |
+| `src/kanban/model/schema.js` | Format constants, defaults, validation, repair pass, migrations map |
+| `src/kanban/model/store.js` | In-memory store; **all** mutations go through `mutate()` |
+| `src/kanban/storage/fileHandle.js` | Pickers, permissions, IndexedDB handle persistence |
+| `src/kanban/storage/persistence.js` | Load pipeline, 750 ms debounced save queue, pre-write conflict gate |
+| `src/kanban/storage/backups.js` | Daily rolling backups (keep 14), pre-migration backups |
+| `src/kanban/ui/` | Vanilla DOM; full board re-render on every store change |
+| `src/kanban/main.js` | Boot, screen switching, event wiring, fallback mode |
+
+### Flashcards (`src/flashcards/`)
+
+| Path | Role |
+|---|---|
+| `src/flashcards/csv.js` | RFC 4180 CSV parser with auto-delimiter detection (`,` or `;`) |
+| `src/flashcards/main.js` | Deck state, flip/navigate, keyboard + swipe controls |
+
+### Shared (`src/shared/`)
+
+Empty for now. Intended home for utilities needed by more than one app (e.g. `escapeHtml`, `shortId`).
 
 ## Invariants — do not break
 
