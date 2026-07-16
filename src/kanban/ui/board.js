@@ -22,7 +22,11 @@ export function renderBoard(root) {
 }
 
 function columnEl(list) {
-  const tasks = tasksInList(list.id);
+  const tasks = tasksInList(list.id).filter((t) => {
+    if (!t.projectId) return true;
+    const proj = getProject(t.projectId);
+    return proj && !proj.archived;
+  });
   const col = document.createElement("section");
   col.className = "column";
   col.dataset.listId = list.id;

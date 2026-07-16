@@ -15,7 +15,6 @@ import {
   setStatus,
   visibleLists,
 } from "../model/store.js";
-import { PROJECT_STATUSES, PROJECT_STATUS_LABELS } from "../model/schema.js";
 import { openTaskEditor } from "./taskModal.js";
 
 const ORPHANS_KEY = "__orphans__"; // DOM/expansion key only, never persisted
@@ -83,23 +82,6 @@ function card(project, stats) {
     });
   }
 
-  let status;
-  if (isOrphans) {
-    status = document.createElement("span");
-    status.className = "project-status none";
-    status.textContent = "—";
-  } else {
-    status = document.createElement("select");
-    status.className = "project-status";
-    for (const s of PROJECT_STATUSES) {
-      status.append(new Option(PROJECT_STATUS_LABELS[s], s));
-    }
-    status.value = project.status;
-    status.addEventListener("change", () =>
-      updateProject(project.id, { status: status.value })
-    );
-  }
-
   const completion = document.createElement("div");
   completion.className = "completion";
   const bar = document.createElement("div");
@@ -113,7 +95,7 @@ function card(project, stats) {
   text.textContent = `${stats.done}/${stats.total} · ${stats.pct}%`;
   completion.append(bar, text);
 
-  row.append(caret, name, status, completion);
+  row.append(caret, name, completion);
 
   if (project?.archived) {
     row.appendChild(document.createElement("span")); // keep grid columns aligned
