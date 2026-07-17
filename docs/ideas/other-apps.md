@@ -6,6 +6,7 @@
 
 New boolean properties that keep track of tasks of a project that are not done by me. Add a visual distinction in the project view and dashboard view.
 
+### Hide backlog (first List)
 
 ## Midnight Library
 
