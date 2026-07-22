@@ -1,5 +1,7 @@
 // Kanban board rendering: one column per non-archived list. The whole board
 // re-renders on every store change — cheap at personal scale.
+// The first list (lowest order, typically Inbox/Backlog) renders as a collapsible
+// full-width drawer so it doesn't dominate the board view.
 
 import {
   visibleLists,
@@ -14,11 +16,99 @@ import {
 import { INBOX_ID, PRIORITY_LABELS } from "../model/schema.js";
 import { openTaskEditor } from "./taskModal.js";
 
+let drawerOpen = false;
+let _boardRoot = null;
+
 export function renderBoard(root) {
+  _boardRoot = root;
   root.textContent = "";
-  for (const list of visibleLists()) {
-    root.appendChild(columnEl(list));
+  const lists = visibleLists();
+  if (!lists.length) return;
+
+  const [first, ...rest] = lists;
+  root.appendChild(drawerEl(first));
+
+  if (rest.length) {
+    const row = document.createElement("div");
+    row.className = "columns-row";
+    for (const list of rest) row.appendChild(columnEl(list));
+    root.appendChild(row);
   }
+}
+
+function drawerEl(list) {
+  const tasks = tasksInList(list.id).filter((t) => {
+    if (!t.projectId) return true;
+    const proj = getProject(t.projectId);
+    return proj && !proj.archived;
+  });
+
+  const drawer = document.createElement("section");
+  drawer.className = "drawer";
+  drawer.dataset.listId = list.id;
+
+  const header = document.createElement("header");
+  header.className = "drawer-header";
+
+  const caret = document.createElement("span");
+  caret.className = "drawer-caret";
+  caret.textContent = drawerOpen ? "▼" : "▶";
+
+  const dot = document.createElement("span");
+  dot.className = "list-dot";
+  dot.style.background = list.color;
+
+  const name = document.createElement("h2");
+  name.textContent = list.name;
+  name.title = "Double-click to rename";
+  name.addEventListener("dblclick", () => {
+    const next = prompt("Rename list", list.name);
+    if (next !== null) renameList(list.id, next);
+  });
+
+  const count = document.createElement("span");
+  count.className = "count";
+  count.textContent = tasks.filter((t) => t.status === "open").length;
+
+  header.append(caret, dot, name, count);
+  header.addEventListener("click", (e) => {
+    if (e.target === name) return;
+    drawerOpen = !drawerOpen;
+    renderBoard(_boardRoot);
+  });
+
+  const body = document.createElement("div");
+  body.className = "drawer-body" + (drawerOpen ? "" : " hidden");
+  for (const task of tasks) body.appendChild(cardEl(task));
+
+  const input = document.createElement("input");
+  input.className = "add-input" + (drawerOpen ? "" : " hidden");
+  input.placeholder = "Add a task…";
+  input.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    const title = input.value;
+    addTask(list.id, title);
+    const fresh = document.querySelector(
+      `.drawer[data-list-id="${CSS.escape(list.id)}"] .add-input`
+    );
+    fresh?.focus();
+  });
+
+  drawer.append(header, body, input);
+
+  drawer.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    drawer.classList.add("drag-over");
+  });
+  drawer.addEventListener("dragleave", () => drawer.classList.remove("drag-over"));
+  drawer.addEventListener("drop", (e) => {
+    e.preventDefault();
+    drawer.classList.remove("drag-over");
+    const id = e.dataTransfer.getData("text/plain");
+    if (id) moveTask(id, list.id);
+  });
+
+  return drawer;
 }
 
 function columnEl(list) {
@@ -130,6 +220,12 @@ function cardEl(task) {
 
   const meta = document.createElement("div");
   meta.className = "card-meta";
+  if (task.status === "delegated" || task.status === "blocked") {
+    const badge = document.createElement("span");
+    badge.className = `status-badge ${task.status}`;
+    badge.textContent = task.status === "delegated" ? "Delegated" : "Blocked";
+    meta.appendChild(badge);
+  }
   const project = task.projectId ? getProject(task.projectId) : null;
   if (project) {
     const chip = document.createElement("span");

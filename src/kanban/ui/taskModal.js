@@ -26,6 +26,8 @@ export function openTaskEditor(taskId) {
         <label>Status
           <select name="status">
             <option value="open">Open</option>
+            <option value="delegated">Delegated</option>
+            <option value="blocked">Blocked</option>
             <option value="done">Done</option>
             <option value="cancelled">Cancelled</option>
           </select>
