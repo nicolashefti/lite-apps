@@ -70,6 +70,43 @@ input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); ou
 }
 .topbar h1 { font-size: 16px; margin: 0; }
 
+/* ---- dropdown menu ---- */
+
+.menu-anchor { position: relative; }
+
+.menu-popup {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  padding: 4px;
+  z-index: 200;
+  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+}
+.menu-popup.hidden { display: none; }
+.menu-popup button {
+  width: 100%;
+  text-align: left;
+  border-color: transparent;
+  border-radius: 5px;
+}
+.menu-popup button:hover { background: rgba(0,0,0,0.06); border-color: transparent; }
+
+.home-btn {
+  font-size: 20px;
+  line-height: 1;
+  text-decoration: none;
+  opacity: 0.55;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+.home-btn:hover { opacity: 1; }
+
 .save-status { font-size: 13px; color: var(--muted); }
 .save-status.ok { color: #3a9d5d; }
 .save-status.err { color: var(--danger); }

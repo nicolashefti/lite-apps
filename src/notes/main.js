@@ -6,30 +6,34 @@ import {
 } from "./fs.js";
 import { init as initTree, renderTree, renderRecent, setSelected } from "./tree.js";
 import { renderMarkdown } from "./md.js";
+import { injectHomeLink } from "../shared/homeLink.js";
 
 const MAX_RECENT = 5;
 
 const $ = (id) => document.getElementById(id);
 
 const el = {
-  welcome:      $("nt-welcome"),
-  welcomeMsg:   $("nt-welcome-msg"),
-  pickBtn:      $("nt-pick-btn"),
-  topbar:       $("nt-topbar"),
-  folderName:   $("nt-folder-name"),
-  status:       $("nt-status"),
-  newNoteBtn:   $("nt-new-note-btn"),
-  app:          $("nt-app"),
-  sidebarTitle: $("nt-sidebar-title"),
-  recent:       $("nt-recent"),
-  tree:         $("nt-tree"),
-  noteTitle:    $("nt-note-title"),
-  deleteBtn:    $("nt-delete-btn"),
-  editorBody:   $("nt-editor-body"),
-  textarea:     $("nt-textarea"),
-  divider:      $("nt-divider"),
-  preview:      $("nt-preview"),
-  refreshBtn:   $("nt-refresh-btn"),
+  welcome:       $("nt-welcome"),
+  welcomeMsg:    $("nt-welcome-msg"),
+  pickBtn:       $("nt-pick-btn"),
+  topbar:        $("nt-topbar"),
+  folderName:    $("nt-folder-name"),
+  status:        $("nt-status"),
+  newNoteBtn:        $("nt-new-note-btn"),
+  switchFolderBtn:   $("nt-switch-folder-btn"),
+  app:           $("nt-app"),
+  sidebar:       $("nt-sidebar"),
+  sidebarResize: $("nt-sidebar-resize"),
+  sidebarTitle:  $("nt-sidebar-title"),
+  recent:        $("nt-recent"),
+  tree:          $("nt-tree"),
+  noteTitle:     $("nt-note-title"),
+  deleteBtn:     $("nt-delete-btn"),
+  editorBody:    $("nt-editor-body"),
+  textarea:      $("nt-textarea"),
+  divider:       $("nt-divider"),
+  preview:       $("nt-preview"),
+  refreshBtn:    $("nt-refresh-btn"),
 };
 
 let root = null;
@@ -38,6 +42,8 @@ let currentPath = null;
 let saveTimer = null;
 let statusTimer = null;
 let dirty = false;
+
+injectHomeLink(el.topbar);
 
 // ---- boot ----
 
@@ -75,8 +81,8 @@ async function loadRoot(handle) {
   root = handle;
   config = await readConfig(handle);
 
-  // Restore split ratio before showing the app
   if (config.splitPct) el.textarea.style.width = config.splitPct + "%";
+  if (config.sidebarWidth) el.sidebar.style.width = config.sidebarWidth + "px";
 
   initTree(onNoteSelect);
   await refreshTree();
@@ -97,10 +103,26 @@ async function loadRoot(handle) {
   }
 }
 
+function collectPaths(nodes, out = new Set()) {
+  for (const node of nodes) {
+    if (node.kind === "file") out.add(node.path);
+    else if (node.children) collectPaths(node.children, out);
+  }
+  return out;
+}
+
 async function refreshTree() {
   const tree = await scanTree(root);
   renderTree(tree, el.tree);
   if (currentPath) setSelected(currentPath);
+
+  const existing = collectPaths(tree);
+  const before = (config.recent ?? []).length;
+  config.recent = (config.recent ?? []).filter((p) => existing.has(p));
+  if (config.recent.length !== before) {
+    renderRecents();
+    writeConfig(root, config);
+  }
 }
 
 // ---- note selection ----
@@ -123,6 +145,7 @@ async function onNoteSelect(path) {
   renderRecents();
   setSelected(path);
   el.noteTitle.textContent = path.split("/").pop().replace(/\.md$/, "");
+  el.noteTitle.title = "Double-click to rename";
   el.deleteBtn.style.display = "";
 
   try {
@@ -180,20 +203,107 @@ el.divider.addEventListener("mousedown", (e) => {
   e.preventDefault();
 });
 
+let sidebarDragging = false;
+let sidebarDragStartX = 0;
+let sidebarDragStartW = 0;
+
+el.sidebarResize.addEventListener("mousedown", (e) => {
+  sidebarDragging = true;
+  sidebarDragStartX = e.clientX;
+  sidebarDragStartW = el.sidebar.offsetWidth;
+  document.documentElement.classList.add("resizing-sidebar");
+  e.preventDefault();
+});
+
 document.addEventListener("mousemove", (e) => {
-  if (!dragging) return;
-  const total = el.editorBody.offsetWidth;
-  const newW = dragStartW + (e.clientX - dragStartX);
-  const pct = Math.max(20, Math.min(80, (newW / total) * 100));
-  el.textarea.style.width = pct + "%";
-  config.splitPct = pct;
+  if (dragging) {
+    const total = el.editorBody.offsetWidth;
+    const newW = dragStartW + (e.clientX - dragStartX);
+    const pct = Math.max(20, Math.min(80, (newW / total) * 100));
+    el.textarea.style.width = pct + "%";
+    config.splitPct = pct;
+  }
+  if (sidebarDragging) {
+    const newW = sidebarDragStartW + (e.clientX - sidebarDragStartX);
+    const clamped = Math.max(140, Math.min(400, newW));
+    el.sidebar.style.width = clamped + "px";
+    config.sidebarWidth = clamped;
+  }
 });
 
 document.addEventListener("mouseup", () => {
-  if (!dragging) return;
-  dragging = false;
-  document.documentElement.classList.remove("resizing");
-  writeConfig(root, config); // persist split
+  if (dragging) {
+    dragging = false;
+    document.documentElement.classList.remove("resizing");
+    writeConfig(root, config);
+  }
+  if (sidebarDragging) {
+    sidebarDragging = false;
+    document.documentElement.classList.remove("resizing-sidebar");
+    writeConfig(root, config);
+  }
+});
+
+// ---- rename ----
+
+el.noteTitle.addEventListener("dblclick", () => {
+  if (!currentPath) return;
+  const currentName = currentPath.split("/").pop().replace(/\.md$/, "");
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = currentName;
+  input.className = "nt-rename-input";
+  el.noteTitle.replaceWith(input);
+  input.select();
+
+  let done = false;
+
+  async function commit() {
+    if (done) return;
+    done = true;
+    input.replaceWith(el.noteTitle);
+
+    const newName = input.value.trim();
+    if (!newName || newName === currentName) return;
+
+    await flushSave();
+    const segs = currentPath.split("/");
+    segs.pop();
+    const dirPath = segs.join("/") || null;
+    const newFileName = newName.endsWith(".md") ? newName : `${newName}.md`;
+    const newPath = dirPath ? `${dirPath}/${newFileName}` : newFileName;
+
+    try {
+      const content = await readFile(root, currentPath);
+      await writeFile(root, newPath, content);
+      await deleteNote(root, currentPath);
+
+      config.recent = (config.recent ?? []).map((p) => (p === currentPath ? newPath : p));
+      if (config.lastOpen === currentPath) config.lastOpen = newPath;
+      currentPath = newPath;
+      el.noteTitle.textContent = newName;
+
+      renderRecents();
+      await refreshTree();
+      setSelected(newPath);
+      writeConfig(root, config);
+    } catch (e) {
+      alert("Could not rename: " + e.message);
+    }
+  }
+
+  function cancel() {
+    if (done) return;
+    done = true;
+    input.replaceWith(el.noteTitle);
+  }
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); commit(); }
+    if (e.key === "Escape") cancel();
+  });
+  input.addEventListener("blur", commit);
 });
 
 // ---- delete ----
@@ -211,6 +321,7 @@ el.deleteBtn.addEventListener("click", async () => {
   el.textarea.disabled = true;
   el.preview.innerHTML = "";
   el.noteTitle.textContent = "Select a note";
+  el.noteTitle.title = "";
   el.deleteBtn.style.display = "none";
 
   config.recent = (config.recent ?? []).filter((p) => p !== path);
@@ -244,6 +355,24 @@ el.newNoteBtn.addEventListener("click", async () => {
 });
 
 el.refreshBtn.addEventListener("click", refreshTree);
+
+el.switchFolderBtn.addEventListener("click", async () => {
+  try {
+    await flushSave();
+    currentPath = null;
+    dirty = false;
+    clearTimeout(saveTimer);
+    el.textarea.value = "";
+    el.textarea.disabled = true;
+    el.preview.innerHTML = "";
+    el.noteTitle.textContent = "Select a note";
+    el.noteTitle.title = "";
+    el.deleteBtn.style.display = "none";
+    await loadRoot(await pickDirectory());
+  } catch (e) {
+    if (e.name !== "AbortError") console.error(e);
+  }
+});
 
 // ---- helpers ----
 

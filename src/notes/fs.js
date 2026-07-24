@@ -56,8 +56,8 @@ export async function scanTree(dirHandle, basePath = "") {
     if (handle.kind === "directory") {
       const children = await scanTree(handle, path);
       entries.push({ name, path, kind: "directory", children });
-    } else if (name.endsWith(".md")) {
-      entries.push({ name, path, kind: "file" });
+    } else {
+      entries.push({ name, path, kind: "file", nonMd: !name.endsWith(".md") });
     }
   }
   entries.sort((a, b) => {

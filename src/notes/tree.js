@@ -30,13 +30,29 @@ function buildFile(node, depth) {
   btn.className = "nt-item nt-file";
   btn.dataset.path = node.path;
   btn.style.paddingLeft = `${12 + depth * 16}px`;
-  btn.textContent = node.name.replace(/\.md$/, "");
-  if (node.path === _selectedPath) btn.classList.add("selected");
-  btn.addEventListener("click", () => {
-    setSelected(node.path);
-    _onSelect?.(node.path);
-  });
+
+  if (node.nonMd) {
+    btn.classList.add("nt-file-other");
+    btn.textContent = node.name;
+  } else {
+    btn.textContent = node.name.replace(/\.md$/, "");
+    if (node.path === _selectedPath) btn.classList.add("selected");
+    btn.addEventListener("click", () => {
+      setSelected(node.path);
+      _onSelect?.(node.path);
+    });
+  }
+
   return btn;
+}
+
+function countMd(nodes) {
+  let n = 0;
+  for (const node of nodes) {
+    if (node.kind === "file" && !node.nonMd) n++;
+    else if (node.kind === "directory") n += countMd(node.children);
+  }
+  return n;
 }
 
 function buildDir(node, depth) {
@@ -51,7 +67,15 @@ function buildDir(node, depth) {
   caret.textContent = "›";
   caret.style.cssText = "display:inline-block;margin-right:5px;font-size:13px";
 
-  header.append(caret, node.name);
+  const nameSpan = document.createElement("span");
+  nameSpan.style.cssText = "flex:1;overflow:hidden;text-overflow:ellipsis";
+  nameSpan.textContent = node.name;
+
+  const countSpan = document.createElement("span");
+  countSpan.className = "nt-hint";
+  countSpan.textContent = `(${countMd(node.children)})`;
+
+  header.append(caret, nameSpan, countSpan);
 
   const childWrap = document.createElement("div");
   let expanded = false;

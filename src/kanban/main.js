@@ -23,8 +23,11 @@ import { createEmptyData } from "./model/schema.js";
 import { renderBoard } from "./ui/board.js";
 import { renderProjects } from "./ui/projects.js";
 import { conflictModal } from "./ui/modal.js";
+import { injectHomeLink } from "../shared/homeLink.js";
 
 const DEVICE_KEY = "ptm.deviceId";
+
+injectHomeLink(document.getElementById("topbar"));
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -44,6 +47,10 @@ const els = {
   viewProjectsBtn: $("view-projects-btn"),
   backupBtn: $("backup-btn"),
   downloadBtn: $("download-btn"),
+  switchFileBtn: $("switch-file-btn"),
+  switchFileMenu: $("switch-file-menu"),
+  sfNewBtn: $("sf-new-btn"),
+  sfOpenBtn: $("sf-open-btn"),
 };
 
 let currentView = localStorage.getItem("ptm.view") === "projects" ? "projects" : "board";
@@ -248,6 +255,21 @@ els.backupBtn.addEventListener("click", async () => {
 });
 
 els.downloadBtn.addEventListener("click", downloadData);
+
+els.switchFileBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  els.switchFileMenu.classList.toggle("hidden");
+});
+document.addEventListener("click", () => els.switchFileMenu.classList.add("hidden"));
+
+els.sfNewBtn.addEventListener("click", () => {
+  els.switchFileMenu.classList.add("hidden");
+  els.createBtn.click();
+});
+els.sfOpenBtn.addEventListener("click", () => {
+  els.switchFileMenu.classList.add("hidden");
+  els.openBtn.click();
+});
 
 document.addEventListener("visibilitychange", () => {
   if (fallbackMode) return;

@@ -21,7 +21,7 @@ Actions:
 - I'd need something to create/edit and follow these routines
 - The daily would be some sort of visual, checkboxing stuff, might be interesting to be able to add my daily ToDo on top?
 - The weekly is kind of similar, not sure how to work with that
-- Quarterly: could generate entries in my iCloud calendar?
+- Quarterly: could generate entries in my iCloud calendar? Some needs to be booked ahead (like theater or massage)
 
 ## Podcast parser
 

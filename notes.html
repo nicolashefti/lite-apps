@@ -23,7 +23,6 @@
       display: flex;
       flex-direction: column;
       background: #f2f3f5;
-      border-right: 1px solid var(--border);
       overflow: hidden;
     }
 
@@ -72,6 +71,7 @@
     .nt-item.selected .nt-hint { color: rgba(255,255,255,0.65); }
 
     .nt-dir { font-weight: 500; }
+    .nt-file:not(.nt-file-other) { color: #2d5a9e; }
 
     .nt-section-label {
       padding: 8px 12px 3px;
@@ -92,6 +92,19 @@
       margin-left: 4px;
       flex-shrink: 0;
     }
+
+    /* sidebar resize handle */
+
+    .nt-sidebar-resize {
+      width: 4px;
+      flex-shrink: 0;
+      background: var(--border);
+      cursor: col-resize;
+      transition: background 0.15s;
+    }
+    .nt-sidebar-resize:hover { background: var(--accent); }
+    html.resizing-sidebar .nt-sidebar-resize { background: var(--accent); }
+    html.resizing-sidebar * { cursor: col-resize !important; user-select: none !important; }
 
     /* editor pane */
 
@@ -115,7 +128,30 @@
       font-size: 14px;
       font-weight: 600;
       color: var(--text);
+      cursor: text;
     }
+
+    .nt-rename-input {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      border: none;
+      border-bottom: 2px solid var(--accent);
+      background: transparent;
+      outline: none;
+      padding: 0;
+      width: 260px;
+      max-width: 400px;
+      font-family: inherit;
+    }
+
+    .nt-file-other {
+      color: var(--muted);
+      font-size: 12px;
+      cursor: default;
+      font-style: italic;
+    }
+    .nt-file-other:hover { background: none; }
 
     /* split body */
 
@@ -222,6 +258,7 @@
     <span class="spacer"></span>
     <span id="nt-status" class="save-status"></span>
     <button id="nt-new-note-btn">+ Note</button>
+    <button id="nt-switch-folder-btn">Switch folder</button>
   </header>
 
   <section id="nt-welcome" class="screen">
@@ -238,7 +275,7 @@
   </section>
 
   <div id="nt-app" class="nt-layout hidden">
-    <nav class="nt-sidebar">
+    <nav class="nt-sidebar" id="nt-sidebar">
       <div class="nt-sidebar-header">
         <span id="nt-sidebar-title">Notes</span>
         <button class="icon-btn" id="nt-refresh-btn" title="Refresh">↻</button>
@@ -246,6 +283,7 @@
       <div id="nt-recent"></div>
       <div class="nt-tree" id="nt-tree"></div>
     </nav>
+    <div class="nt-sidebar-resize" id="nt-sidebar-resize"></div>
 
     <div class="nt-editor">
       <div class="nt-editor-header">

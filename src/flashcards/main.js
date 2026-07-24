@@ -1,4 +1,5 @@
 import { parseCSV } from './csv.js';
+import { injectHomeLink } from '../shared/homeLink.js';
 
 const $ = id => document.getElementById(id);
 
@@ -20,6 +21,8 @@ const els = {
   flipBtn:   $('fc-flip-btn'),
   nextBtn:   $('fc-next-btn'),
 };
+
+injectHomeLink(els.topbar);
 
 let deck = [];    // [{front, back}]
 let order = [];   // shuffled/sequential index array into deck
