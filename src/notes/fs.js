@@ -67,6 +67,23 @@ export async function scanTree(dirHandle, basePath = "") {
   return entries;
 }
 
+export async function buildIndex(rootHandle, nodes) {
+  const index = new Map();
+  async function walk(ns) {
+    for (const node of ns) {
+      if (node.kind === "directory") {
+        await walk(node.children);
+      } else if (!node.nonMd) {
+        try {
+          index.set(node.path, await readFile(rootHandle, node.path));
+        } catch { /* removed between scan and index build — skip */ }
+      }
+    }
+  }
+  await walk(nodes);
+  return index;
+}
+
 export async function readFile(rootHandle, path) {
   const segs = path.split("/");
   const name = segs.pop();

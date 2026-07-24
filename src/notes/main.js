@@ -2,9 +2,9 @@ import {
   fsSupported, pickDirectory, storedDirHandle,
   hasPermission, requestPermission,
   scanTree, readFile, writeFile, createNote, deleteNote,
-  readConfig, writeConfig,
+  readConfig, writeConfig, buildIndex,
 } from "./fs.js";
-import { init as initTree, renderTree, renderRecent, setSelected } from "./tree.js";
+import { init as initTree, renderTree, renderRecent, renderSearchResults, setSelected } from "./tree.js";
 import { renderMarkdown } from "./md.js";
 import { injectHomeLink } from "../shared/homeLink.js";
 
@@ -21,6 +21,7 @@ const el = {
   status:        $("nt-status"),
   newNoteBtn:        $("nt-new-note-btn"),
   switchFolderBtn:   $("nt-switch-folder-btn"),
+  searchInput:   $("nt-search"),
   app:           $("nt-app"),
   sidebar:       $("nt-sidebar"),
   sidebarResize: $("nt-sidebar-resize"),
@@ -42,6 +43,10 @@ let currentPath = null;
 let saveTimer = null;
 let statusTimer = null;
 let dirty = false;
+let lastTree = [];
+let index = null;
+let indexToken = 0;
+let searchDebounce = null;
 
 injectHomeLink(el.topbar);
 
@@ -113,8 +118,15 @@ function collectPaths(nodes, out = new Set()) {
 
 async function refreshTree() {
   const tree = await scanTree(root);
-  renderTree(tree, el.tree);
-  if (currentPath) setSelected(currentPath);
+  lastTree = tree;
+
+  const q = el.searchInput.value.trim();
+  if (q) {
+    runSearch(q);
+  } else {
+    renderTree(tree, el.tree);
+    if (currentPath) setSelected(currentPath);
+  }
 
   const existing = collectPaths(tree);
   const before = (config.recent ?? []).length;
@@ -123,6 +135,18 @@ async function refreshTree() {
     renderRecents();
     writeConfig(root, config);
   }
+
+  rebuildIndex();
+}
+
+async function rebuildIndex() {
+  const token = ++indexToken;
+  index = null;
+  const built = await buildIndex(root, lastTree);
+  if (token !== indexToken) return; // superseded by a newer refresh
+  index = built;
+  const q = el.searchInput.value.trim();
+  if (q) runSearch(q); // re-render with full-text results now available
 }
 
 // ---- note selection ----
@@ -178,6 +202,7 @@ async function save() {
   try {
     await writeFile(root, currentPath, el.textarea.value);
     dirty = false;
+    if (index) index.set(currentPath, el.textarea.value);
     setStatus("Saved", false);
   } catch {
     setStatus("Save failed", true);
@@ -371,6 +396,54 @@ el.switchFolderBtn.addEventListener("click", async () => {
     await loadRoot(await pickDirectory());
   } catch (e) {
     if (e.name !== "AbortError") console.error(e);
+  }
+});
+
+// ---- search ----
+
+function runSearch(q) {
+  el.recent.classList.add("hidden");
+  const lq = q.toLowerCase();
+
+  if (!index) {
+    el.tree.innerHTML = `<div class="nt-section-label" style="padding:16px 12px">Indexing…</div>`;
+    return;
+  }
+
+  const results = [];
+  for (const [path, content] of index) {
+    const name = path.split("/").pop().replace(/\.md$/, "");
+    const nameIdx = name.toLowerCase().indexOf(lq);
+    const contentIdx = content.toLowerCase().indexOf(lq);
+    if (nameIdx !== -1 || contentIdx !== -1) {
+      results.push({ path, name, nameMatch: nameIdx !== -1, contentIdx, content });
+    }
+  }
+  results.sort((a, b) => {
+    if (a.nameMatch !== b.nameMatch) return a.nameMatch ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
+  renderSearchResults(results, q, el.tree, onNoteSelect);
+}
+
+function exitSearch() {
+  el.recent.classList.remove("hidden");
+  renderTree(lastTree, el.tree);
+  if (currentPath) setSelected(currentPath);
+}
+
+el.searchInput.addEventListener("input", () => {
+  clearTimeout(searchDebounce);
+  const q = el.searchInput.value.trim();
+  if (!q) { exitSearch(); return; }
+  searchDebounce = setTimeout(() => runSearch(q), 200);
+});
+
+el.searchInput.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    el.searchInput.value = "";
+    exitSearch();
+    el.searchInput.blur();
   }
 });
 

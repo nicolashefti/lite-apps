@@ -92,6 +92,68 @@ function buildDir(node, depth) {
   return wrap;
 }
 
+function escHtml(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function highlight(text, query) {
+  const i = text.toLowerCase().indexOf(query.toLowerCase());
+  if (i === -1) return escHtml(text);
+  return (
+    escHtml(text.slice(0, i)) +
+    `<mark class="nt-highlight">${escHtml(text.slice(i, i + query.length))}</mark>` +
+    escHtml(text.slice(i + query.length))
+  );
+}
+
+function getSnippet(content, query, idx) {
+  const W = 70;
+  const start = Math.max(0, idx - W);
+  const end = Math.min(content.length, idx + query.length + W);
+  let s = content.slice(start, end).replace(/\n+/g, " ");
+  if (start > 0) s = "…" + s;
+  if (end < content.length) s += "…";
+  return s;
+}
+
+export function renderSearchResults(results, query, container, onSelect) {
+  container.innerHTML = "";
+
+  if (!results.length) {
+    const msg = document.createElement("div");
+    msg.className = "nt-section-label";
+    msg.style.padding = "16px 12px";
+    msg.textContent = "No results";
+    container.appendChild(msg);
+    return;
+  }
+
+  for (const { path, name, contentIdx, content } of results) {
+    const btn = document.createElement("button");
+    btn.className = "nt-item nt-file nt-search-result";
+    btn.dataset.path = path;
+    if (path === _selectedPath) btn.classList.add("selected");
+
+    const nameEl = document.createElement("div");
+    nameEl.className = "nt-sr-name";
+    nameEl.innerHTML = highlight(name, query);
+    btn.appendChild(nameEl);
+
+    if (contentIdx !== -1) {
+      const snippetEl = document.createElement("div");
+      snippetEl.className = "nt-sr-snippet";
+      snippetEl.innerHTML = highlight(getSnippet(content, query, contentIdx), query);
+      btn.appendChild(snippetEl);
+    }
+
+    btn.addEventListener("click", () => {
+      setSelected(path);
+      onSelect?.(path);
+    });
+    container.appendChild(btn);
+  }
+}
+
 export function renderRecent(paths, container, onSelect) {
   container.innerHTML = "";
   if (!paths.length) return;
